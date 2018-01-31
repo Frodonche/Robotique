@@ -1,0 +1,147 @@
+<!DOCTYPE aesl-source>
+<network>
+
+
+<!--list of global events-->
+
+
+<!--list of constants-->
+<constant value="600" name="VIT_MAX"/>
+
+
+<!--show keywords state-->
+<keywords flag="true"/>
+
+
+<!--node thymio-II-->
+<node nodeId="7972" name="thymio-II">#*
+ * Fichier définissant le contrôle d'un Thymio 2
+ *
+ * À vous de jouer :
+ * - normalisation des données et 
+ * - calcul des vitesses de roues souhaitées
+ *
+ *#
+ 
+# numéro du capteur
+var cpt
+# donnée capteur normalisée
+var npi[7]
+var CPT0
+var CPT1
+var CPT2
+var CPT3
+var CPT4
+var CPT5
+var CPT6
+
+var toto
+
+# Variables custom
+var vitesse_gauche
+var vitesse_droite 
+var distance_min = 1000
+var distance_max = 3000
+
+# coupe le timer 0 
+timer.period[0] = 0
+
+#coupe le timer 1
+timer.period[1] = 0
+
+# Boucle principale (liée au timer 0)
+onevent timer0
+
+timer.period[1] = 0
+
+# Les capteurs vont de 0 à 6, de l'avt G à l'arr D
+for cpt in 0:6 do
+	# vous pouvez normaliser la valeur
+	npi[cpt] = prox.horizontal[cpt] 
+end
+
+CPT0 = npi[0] -1500 
+CPT1 = npi[1] -1500 
+CPT2 = npi[2] -1500
+CPT3 = npi[3] -1500 
+CPT4 = npi[4] -1500 
+CPT5 = npi[5] -1500
+CPT6 = npi[6] -1500
+
+    # mettez ici vos calculs
+  	# tout droit
+	vitesse_gauche = VIT_MAX
+	vitesse_droite = VIT_MAX
+  	
+  	if CPT0 > CPT2 and CPT4 > CPT2 then # si on est dans un coin
+  		if CPT0 &lt; distance_max and CPT4 &lt; distance_max then	
+ 	 		if CPT0 > CPT4 then
+  				vitesse_gauche = -VIT_MAX
+  				vitesse_droite = VIT_MAX
+  			else
+  				vitesse_gauche = VIT_MAX
+  				vitesse_droite = -VIT_MAX
+  			end
+  		else
+  			timer.period[1] = 100 #
+  		end
+  	else if CPT0 > CPT2 then # longe mur gauche
+  		vitesse_gauche = VIT_MAX
+  		vitesse_droite = -1/2 * VIT_MAX
+	  	else if CPT4 > CPT2 then # longe mur droite
+	  		vitesse_gauche = -1/2 * VIT_MAX
+	  		vitesse_droite = VIT_MAX
+		  	
+		  	else if CPT2 > distance_min then # obstacle de face
+			  		if CPT1 > CPT3 then # tourner a droite
+			  			vitesse_gauche = VIT_MAX
+			  			vitesse_droite = -VIT_MAX
+			  		else # tourner a gauche
+			  			vitesse_gauche = -VIT_MAX
+			  			vitesse_droite = VIT_MAX
+			  		end
+			  	else if  CPT1 > CPT3 then # esquiver mur gauche
+				  		vitesse_gauche = VIT_MAX
+				  		vitesse_droite = -VIT_MAX
+					else  if CPT1 &lt; CPT3 then # esquiver mur droite
+						vitesse_gauche = -VIT_MAX
+						vitesse_droite = VIT_MAX
+			  			end
+			  		end
+			  	end
+		  	end
+	  	end
+  	end
+  
+  
+# vitesses souhaitées (entre -500 et 500)
+motor.left.target  = vitesse_gauche
+motor.right.target = vitesse_droite
+
+
+# event timer 1
+onevent timer1
+toto = 0
+while CPT4 > distance_min do
+	motor.left.target  = -VIT_MAX
+	motor.right.target = VIT_MAX
+	CPT4 = prox.horizontal[4] 
+end	
+
+
+timer.period[0] = 100
+
+# Appuyer sur le bouton avant lance la boucle principale
+onevent button.forward
+timer.period[0] = 100  # lance la boucle principale
+
+# Appuyer sur le bouton central arrête le robot
+onevent button.center
+timer.period[0] = 0         # stoppe le timer 0
+timer.period[1] = 0  	# stoppe le timer 1
+motor.left.target  = 0      # arrête le robot
+motor.right.target = 0
+</node>
+
+
+</network>
